@@ -254,7 +254,7 @@ void HandleRFBucket(uint16_t duration, bool high_low)
 			if (START_GET(status[0]) == 0)
 			{
 				// if PT226x standard sniffing calculate the pulse time by the longer sync bucket
-				// this will enable receive PT226x in a range of PT226x_SYNC_MIN <-> 32767µs
+				// this will enable receive PT226x in a range of PT226x_SYNC_MIN <-> 32767ï¿½s
 				if (duration > PT226x_SYNC_MIN && !high_low) // && (duration < PT226x_SYNC_MAX))
 				{
 					// increment start because of the skipped first high bucket
@@ -395,7 +395,7 @@ uint8_t PCA0_DoSniffing(uint8_t active_command)
 
 	memset(status, 0, sizeof(PROTOCOL_STATUS) * PROTOCOLCOUNT);
 
-	// restore timer to 100000Hz, 10µs interval
+	// restore timer to 100000Hz, 10ï¿½s interval
 	SetTimer0Overflow(0x0B);
 
 	// enable interrupt for RF receiving
@@ -653,38 +653,49 @@ void Bucket_Received(uint16_t duration, bool high_low)
 				// check if bucket was already received
 				if (!findBucket(duration, &bucket_index))
 				{
-					// new bucket received, add to array
+				  // check if maximum of array got reached
+          if (bucket_count >= ARRAY_LENGTH(buckets))
+          {
+            // restart sync
+            rf_state = RF_IDLE;
+            break;
+          }
+
+          // new bucket received, add to array
 					buckets[bucket_count] = duration;
 					bucket_index = bucket_count;
 					bucket_count++;
-
-					// check if maximum of array got reached
-					if (bucket_count > ARRAY_LENGTH(buckets))
-					{
-						// restart sync
-						rf_state = RF_IDLE;
-					}
 				}
 
 				// fill rf data with the current bucket number
 				if (actual_byte_high_nibble)
 				{
+          // check if maximum of array got reached
+          if (actual_byte >= RF_DATA_BUFFERSIZE)
+          {
+            // restart sync
+            rf_state = RF_IDLE;
+            break;
+          }
+
 					RF_DATA[actual_byte] = (bucket_index << 4) | ((uint8_t)high_low << 7);
 				}
 				else
 				{
+          // check if maximum of array got reached
+          if (actual_byte >= RF_DATA_BUFFERSIZE)
+          {
+            // restart sync
+            rf_state = RF_IDLE;
+            break;
+          }
+
 					RF_DATA[actual_byte] |= (bucket_index | ((uint8_t)high_low << 3));
 
 					crc = Compute_CRC8_Simple_OneByte(crc ^ RF_DATA[actual_byte]);
 
 					actual_byte++;
 
-					// check if maximum of array got reached
-					if (actual_byte > RF_DATA_BUFFERSIZE)
-					{
-						// restart sync
-						rf_state = RF_IDLE;
-					}
 				}
 
 				actual_byte_high_nibble = !actual_byte_high_nibble;
