@@ -61,6 +61,8 @@ SI_SEGMENT_VARIABLE(bucket_count_sync_2, uint8_t, SI_SEG_XDATA);
 SI_SEGMENT_VARIABLE(buffer_buckets[4], uint16_t, SI_SEG_XDATA) = {0};
 SI_SEGMENT_VARIABLE(buffer_buckets_positions, uint8_t, SI_SEG_XDATA) = 0;
 
+SI_SEGMENT_VARIABLE(delta_mode, uint8_t, SI_SEG_XDATA) = 0;
+
 //-----------------------------------------------------------------------------
 // Callbacks
 //-----------------------------------------------------------------------------
@@ -91,8 +93,11 @@ uint8_t Compute_CRC8_Simple_OneByte(uint8_t byteVal)
 
 uint16_t compute_delta(uint16_t bucket)
 {
-	//return ((bucket >> 2) + (bucket >> 4));
-	return (bucket >> 2); // 25% delta of bucket for advanced decoding
+  if (delta_mode > 0) {
+	  return ((bucket >> 2) + (bucket >> 4));
+  } else {
+	  return (bucket >> 2); // 25% delta of bucket for advanced decoding
+  }
 }
 
 bool CheckRFBucket(uint16_t duration, uint16_t bucket, uint16_t delta)

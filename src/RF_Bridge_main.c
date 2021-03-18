@@ -216,6 +216,12 @@ int main (void)
 							// start timeout timer
 							InitTimer3_ms(1, 30000);
 							break;
+						case RF_CODE_LEARN_DELTA_NEW:
+              PCA0_StopSniffing();
+              uart_state = RECEIVING;
+              position = 0;
+						  len = 1;
+						  break;
 						case RF_CODE_ACK:
 							// re-enable default RF_CODE_RFIN sniffing
 							last_sniffing_command = PCA0_DoSniffing(last_sniffing_command);
@@ -460,6 +466,17 @@ int main (void)
 				// send acknowledge
 				finish_command(RF_CODE_ACK);
 				break;
+
+			// Set the mode for the delta calculation
+			case RF_CODE_LEARN_DELTA_NEW:
+        // only do the job if all data got received by UART
+        if (uart_state != IDLE)
+          break;
+
+        delta_mode = (uint8_t)(RF_DATA[0]&0xff);
+        // send acknowledge
+        finish_command(delta_mode);
+        break;
 
 			// host was requesting the firmware version
 			case RF_ALTERNATIVE_FIRMWARE:
